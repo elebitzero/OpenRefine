@@ -70,6 +70,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   vertical-align: middle;
 }
 
+.mapped-value-validated-input {
+}
+
+.mapped-value-unvalidated-input {
+    border: 1px solid red !important;
+    background-color: #ffbfbf;
+}
+
 .type-id {
   vertical-align: middle;
   margin-left: 0;

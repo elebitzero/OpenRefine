@@ -205,7 +205,9 @@ ReconStandardServicePanel.prototype._populatePanel = function() {
     this._elmts.typeInput.trigger('focus');
   }
 }
-  ReconStandardServicePanel.prototype._populateProperties = function () {
+
+ReconStandardServicePanel.prototype._populateProperties = function () {
+  var self = this;
   /*
    *  Populate properties
    */
@@ -219,7 +221,18 @@ ReconStandardServicePanel.prototype._populatePanel = function() {
       '</table>'
   ).appendTo(detailTableContainer)[0];
 
-  function renderDetailColumn(column) {
+
+  var columns = theProject.columnModel.columns;
+  for (var i = 0; i < columns.length; i++) {
+    var column = columns[i];
+    if (column !== this._column) {
+      self._renderDetailColumn(detailTable,column);
+    }
+  }
+};
+
+ReconStandardServicePanel.prototype._renderDetailColumn = function (detailTable, column) {
+    var self = this;
     var tr = detailTable.insertRow(detailTable.rows.length);
     var td0 = tr.insertCell(0);
     var td1 = tr.insertCell(1);
@@ -229,34 +242,26 @@ ReconStandardServicePanel.prototype._populatePanel = function() {
     let mappedColumn = $("<span>").addClass("mapped-value");
 
     mappedColumn.append($("<a>").text(""))
-        .append($("<span>").addClass("type-id").text("()"))
-        .append($("<a>").addClass("edit-mapped-value").text("edit")
-            .on('click', function() {
-              $input = $(this).parent().siblings('input[name="property"]');
-              $input.removeData('data.suggest');
-              $label = $(this).parent().parent().find('.mapped-value > a:not(.edit-mapped-value)');
-              $input.val($label.text()).prop('disabled',false);
-              mappedColumn.toggle();
-              $input.trigger('focus');
-            }));
-
+            .append($("<span>").addClass("type-id").text("()"))
+            .append($("<a>").addClass("edit-mapped-value").text("edit")
+                    .on('click', function() {
+                        $input = $(this).parent().siblings('input[name="property"]');
+                        $input.removeData('data.suggest');
+                        $label = $(this).parent().parent().find('.mapped-value > a:not(.edit-mapped-value)');
+                        $input.val($label.text()).prop('disabled',false);
+                        mappedColumn.toggle();
+                        $input.trigger('focus');
+                    }));
+    let mappedColumnInput = $("<input>")
+            .attr("size", "25")
+            .attr("name", "property")
+            .attr("spellcheck", "false")
+            .data('columnName',column.name)
     $(td1).append(mappedColumn)
-        .append(
-            $("<input>")
-                .attr("size", "25")
-                .attr("name", "property")
-                .attr("spellcheck", "false")
-                .data('columnName',column.name)
-        );
-  }
-  var columns = theProject.columnModel.columns;
-  for (var i = 0; i < columns.length; i++) {
-    var column = columns[i];
-    if (column !== this._column) {
-      renderDetailColumn(column);
-    }
-  }
-};
+            .append(mappedColumnInput);
+    self.fixSuggestInput(mappedColumnInput);
+}
+
 
 ReconStandardServicePanel.prototype._wireEvents = function() {
   var self = this;
@@ -282,6 +287,16 @@ ReconStandardServicePanel.prototype._wireEvents = function() {
     });
   }
 
+    input.on("blur", function (e) {
+        let $input = $(e.currentTarget);
+
+        if (!$input.data('data.suggest')) {
+            $input.addClass('mapped-value-unvalidated-input');
+        } else {
+            $input.removeClass('mapped-value-unvalidated-input');
+        }
+    });
+
   input.on("bind fb-select", function(e, data) {
     self._panel
     .find('input[name="type-choice"][value=""]')
@@ -289,6 +304,8 @@ ReconStandardServicePanel.prototype._wireEvents = function() {
 
     self._rewirePropertySuggests(data.id);
   });
+  // adds tweaks to display the validation status more clearly
+  self.fixSuggestInput(input);
 
   this._rewirePropertySuggests((this._types.length > 0) ? this._types[0] : null);
 };
@@ -318,7 +335,11 @@ ReconStandardServicePanel.prototype._rewirePropertySuggests = function(type) {
       $td.find('.mapped-value > a:not(.edit-mapped-value)').text(mapping.name);
       $td.find('.mapped-value > .type-id').text("(" + mapping.id + ")");
     });
-    }
+  }
+  $.each(inputs, function(index, input) {
+    // adds tweaks to display the validation status more clearly
+    self.fixSuggestInput($(input));
+  });
 };
 
 ReconStandardServicePanel.prototype.start = function() {
@@ -411,3 +432,27 @@ ReconStandardServicePanel.prototype.showBusyReconciling = function(message) {
     $(body).remove()
   };
 };
+
+
+/**
+ * Adds a few tweaks to a suggest widget, mostly to indicate
+ * the status of the validation.
+ */
+ReconStandardServicePanel.prototype.fixSuggestInput = function (input) {
+    input.on("fb-select", function (evt, data) {
+        input.addClass('mapped-value-validated-input');
+        input.trigger('blur');
+    }).on("fb-textchange", function (evt, data) {
+        input.removeClass('mapped-value-validated-input');
+    }).on('blur', function () {
+        console.log('fixSuggestInput: blur()')
+        setTimeout(function () {
+            if (!input.hasClass('mapped-value-validated-input')) {
+                input.addClass('mapped-value-unvalidated-input');
+            }
+        }, 100);
+    }).on('focus', function () {
+        input.removeClass('mapped-value-unvalidated-input');
+    });
+}
+
