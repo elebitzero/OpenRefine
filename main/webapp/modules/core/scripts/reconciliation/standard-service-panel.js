@@ -259,7 +259,6 @@ ReconStandardServicePanel.prototype._renderDetailColumn = function (detailTable,
             .data('columnName',column.name)
     $(td1).append(mappedColumn)
             .append(mappedColumnInput);
-    self.fixSuggestInput(mappedColumnInput);
 }
 
 
@@ -287,16 +286,6 @@ ReconStandardServicePanel.prototype._wireEvents = function() {
     });
   }
 
-    input.on("blur", function (e) {
-        let $input = $(e.currentTarget);
-
-        if (!$input.data('data.suggest')) {
-            $input.addClass('mapped-value-unvalidated-input');
-        } else {
-            $input.removeClass('mapped-value-unvalidated-input');
-        }
-    });
-
   input.on("bind fb-select", function(e, data) {
     self._panel
     .find('input[name="type-choice"][value=""]')
@@ -311,6 +300,7 @@ ReconStandardServicePanel.prototype._wireEvents = function() {
 };
 
 ReconStandardServicePanel.prototype._rewirePropertySuggests = function(type) {
+  var self = this;
   var inputs = this._panel
   .find('input[name="property"]')
   .off();
@@ -441,18 +431,18 @@ ReconStandardServicePanel.prototype.showBusyReconciling = function(message) {
 ReconStandardServicePanel.prototype.fixSuggestInput = function (input) {
     input.on("fb-select", function (evt, data) {
         input.addClass('mapped-value-validated-input');
-        input.trigger('blur');
+        input.removeClass('mapped-value-unvalidated-input');
     }).on("fb-textchange", function (evt, data) {
         input.removeClass('mapped-value-validated-input');
     }).on('blur', function () {
-        console.log('fixSuggestInput: blur()')
-        setTimeout(function () {
-            if (!input.hasClass('mapped-value-validated-input')) {
-                input.addClass('mapped-value-unvalidated-input');
-            }
-        }, 100);
+        if (input.data('data.suggest')) {
+            input.addClass('mapped-value-validated-input');
+            input.removeClass('mapped-value-unvalidated-input');
+        } else {
+            input.addClass('mapped-value-unvalidated-input');
+            input.removeClass('mapped-value-validated-input');
+        }
     }).on('focus', function () {
         input.removeClass('mapped-value-unvalidated-input');
     });
 }
-
